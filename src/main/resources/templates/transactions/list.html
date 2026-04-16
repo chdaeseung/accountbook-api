@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>거래내역 목록</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/transaction.css}">
+</head>
+<body>
+<div class="page-container">
+    <div th:replace="~{fragments/nav :: navbar}"></div>
+
+    <section class="page-header">
+        <div>
+            <h1 class="page-title">거래내역</h1>
+            <p class="page-description">조건별로 거래내역을 조회하고 상세 내역을 확인할 수 있습니다.</p>
+        </div>
+
+        <div class="header-actions">
+            <button type="button" class="secondary-btn toggle-filter-btn" onclick="toggleFilterCard()">
+                세부 검색
+            </button>
+            <a th:href="@{/transactions/create}" class="primary-btn">거래내역 등록</a>
+        </div>
+    </section>
+
+    <section class="content-card filter-card collapsed" id="filterCard">
+        <div class="card-header">
+            <h2>조건 검색</h2>
+        </div>
+
+        <form th:action="@{/transactions}" method="get" class="filter-form">
+            <div class="filter-grid">
+                <div class="form-group">
+                    <label for="startDate">시작일</label>
+                    <input type="date" id="startDate" name="startDate" th:value="${searchDto.startDate}">
+                </div>
+
+                <div class="form-group">
+                    <label for="endDate">종료일</label>
+                    <input type="date" id="endDate" name="endDate" th:value="${searchDto.endDate}">
+                </div>
+
+                <div class="form-group">
+                    <label for="categoryId">카테고리</label>
+                    <select id="categoryId" name="categoryId">
+                        <option value="">전체</option>
+                        <option th:each="category : ${categories}"
+                                th:value="${category.id}"
+                                th:text="${category.name}"
+                                th:selected="${searchDto.categoryId != null and searchDto.categoryId == category.id}">
+                        </option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="searchTypeSelect">유형</label>
+                    <select id="searchTypeSelect" name="type" onchange="toggleSearchExpenseType()">
+                        <option value="">전체</option>
+                        <option value="INCOME"
+                                th:selected="${searchDto.type != null and searchDto.type.name() == 'INCOME'}">수입</option>
+                        <option value="EXPENSE"
+                                th:selected="${searchDto.type != null and searchDto.type.name() == 'EXPENSE'}">지출</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="bankAccountId">거래 계좌</label>
+                    <select id="bankAccountId" name="bankAccountId">
+                        <option value="">전체 계좌</option>
+                        <option th:each="account : ${bankAccounts}"
+                                th:value="${account.id}"
+                                th:text="${account.accountName}"
+                                th:selected="${searchDto.bankAccountId != null and searchDto.bankAccountId == account.id}">
+                        </option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="memoKeyword">메모</label>
+                    <input type="text"
+                           id="memoKeyword"
+                           name="memoKeyword"
+                           placeholder="메모 검색어 입력"
+                           th:value="${searchDto.memoKeyword}">
+                </div>
+            </div>
+
+            <input type="hidden" name="page" value="0">
+            <input type="hidden" name="size" th:value="${searchDto.size}">
+
+            <div class="filter-actions">
+                <button type="submit" class="primary-btn">검색</button>
+                <a th:href="@{/transactions}" class="secondary-btn">초기화</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="content-card table-card">
+        <div class="card-header">
+            <h2>거래 목록</h2>
+            <span class="list-count" th:text="'총 ' + ${transactionPage.totalElements} + '건'">총 0건</span>
+        </div>
+
+        <div class="table-wrap">
+            <table class="transaction-table">
+                <thead>
+                <tr>
+                    <th class="col-date">날짜</th>
+                    <th class="col-type">유형</th>
+                    <th class="col-category">카테고리</th>
+                    <th class="col-account">계좌</th>
+                    <th class="col-amount text-right">금액</th>
+                    <th class="col-memo">메모</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${transactionPage.content.isEmpty()}">
+                    <td colspan="6" class="empty-row">조회된 거래내역이 없습니다.</td>
+                </tr>
+
+                <tr th:each="transaction : ${transactionPage.content}"
+                    class="clickable-row"
+                    th:onclick="|location.href='@{/transactions/{id}(id=${transaction.id})}'|">
+                    <td class="cell-center" th:text="${transaction.date}">2026-04-07</td>
+
+                    <td>
+                        <div class="type-cell">
+                            <span class="type-badge type-cell"
+                                th:classappend="${transaction.type.name() == 'INCOME'} ? ' income' : ' expense'"
+                                th:text="${transaction.type.name() == 'INCOME' ? '수입' : '지출'}">
+                                수입
+                            </span>
+
+                            <span th:if="${transaction.recurring}" class="recurring-badge">정기</span>
+                        </div>
+                    </td>
+
+                    <td class="cell-center" th:text="${transaction.categoryName}">식비</td>
+
+                    <td class="cell-center" th:text="${transaction.bankAccountName != null ? transaction.bankAccountName : '-'}">
+                        은행
+                    </td>
+
+                    <td class="text-right amount"
+                        th:text="${#numbers.formatInteger(transaction.amount, 3, 'COMMA')} + '원'">15,000원
+                    </td>
+
+                    <td>
+                        <div class="memo-cell">
+                            <span class="memo-text"
+                                  th:text="${#strings.isEmpty(transaction.memo) ? '(내용 없음)' : transaction.memo}">점심 식사</span>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination" th:if="${transactionPage.totalPages > 0}">
+            <span th:if="${transactionPage.first}" class="page-btn disabled">이전</span>
+
+            <a th:if="${!transactionPage.first}"
+               class="page-btn"
+               th:href="@{/transactions(
+                    page=${transactionPage.number - 1},
+                    size=${searchDto.size},
+                    startDate=${searchDto.startDate},
+                    endDate=${searchDto.endDate},
+                    categoryId=${searchDto.categoryId},
+                    type=${searchDto.type},
+                    bankAccountId=${searchDto.bankAccountId},
+                    memoKeyword=${searchDto.memoKeyword})}">
+                이전
+            </a>
+
+            <span th:each="pageNum : ${#numbers.sequence(0, transactionPage.totalPages - 1)}">
+                <a th:if="${pageNum != transactionPage.number}"
+                   class="page-number"
+                   th:text="${pageNum + 1}"
+                   th:href="@{/transactions(
+                        page=${pageNum},
+                        size=${searchDto.size},
+                        startDate=${searchDto.startDate},
+                        endDate=${searchDto.endDate},
+                        categoryId=${searchDto.categoryId},
+                        type=${searchDto.type},
+                        bankAccountId=${searchDto.bankAccountId},
+                        memoKeyword=${searchDto.memoKeyword})}">
+                    1
+                </a>
+
+                <span th:if="${pageNum == transactionPage.number}"
+                      class="page-number active"
+                      th:text="${pageNum + 1}">
+                    1
+                </span>
+            </span>
+
+            <span th:if="${transactionPage.last}" class="page-btn disabled">다음</span>
+
+            <a th:if="${!transactionPage.last}"
+               class="page-btn"
+               th:href="@{/transactions(
+                    page=${transactionPage.number + 1},
+                    size=${searchDto.size},
+                    startDate=${searchDto.startDate},
+                    endDate=${searchDto.endDate},
+                    categoryId=${searchDto.categoryId},
+                    type=${searchDto.type},
+                    bankAccountId=${searchDto.bankAccountId},
+                    memoKeyword=${searchDto.memoKeyword})}">
+                다음
+            </a>
+        </div>
+    </section>
+</div>
+
+<script th:inline="javascript">
+    function toggleSearchExpenseType() {
+        const typeSelect = document.getElementById("searchTypeSelect");
+        const expenseTypeBox = document.getElementById("searchExpenseTypeBox");
+
+        if (typeSelect.value === "EXPENSE") {
+            expenseTypeBox.style.display = "flex";
+        } else {
+            expenseTypeBox.style.display = "none";
+        }
+    }
+
+    function toggleFilterCard() {
+        const filterCard = document.getElementById("filterCard");
+        filterCard.classList.toggle("show");
+    }
+
+    window.onload = function () {
+        toggleSearchExpenseType();
+
+        const startDate = /*[[${searchDto.startDate}]]*/ "";
+        const endDate = /*[[${searchDto.endDate}]]*/ "";
+        const categoryId = /*[[${searchDto.categoryId}]]*/ "";
+        const type = /*[[${searchDto.type}]]*/ "";
+        const bankAccountId = /*[[${searchDto.bankAccountId}]]*/ "";
+        const memoKeyword = /*[[${searchDto.memoKeyword}]]*/ "";
+
+        const hasSearchCondition =
+            startDate !== null && startDate !== "" ||
+            endDate !== null && endDate !== "" ||
+            categoryId !== null && categoryId !== "" ||
+            type !== null && type !== "" ||
+            bankAccountId !== null && bankAccountId !== "" ||
+            memoKeyword !== null && memoKeyword !== "";
+
+        if (hasSearchCondition) {
+            document.getElementById("filterCard").classList.add("show");
+        }
+    };
+</script>
+</body>
+</html>

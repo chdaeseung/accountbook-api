@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>가계부 대시보드</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+</head>
+<body>
+<div class="page-shell">
+    <div class="page-container">
+
+        <div th:replace="~{fragments/nav :: navbar}"></div>
+
+        <div class="dashboard-top-bar">
+            <div class="dashboard-summary-inline">
+                <div class="summary-item income">
+                    <span class="summary-label">이번 달 수입</span>
+                    <span class="summary-value"
+                          th:text="${#numbers.formatInteger(dashboard.totalIncome, 3, 'COMMA')} + '원'"></span>
+                </div>
+
+                <div class="summary-item expense">
+                    <span class="summary-label">이번 달 지출</span>
+                    <span class="summary-value"
+                          th:text="${#numbers.formatInteger(dashboard.totalExpense, 3, 'COMMA')} + '원'"></span>
+                </div>
+            </div>
+
+            <div class="dashboard-month-center">
+                <a th:href="@{/dashboard(year=${prevYear}, month=${prevMonth})}" class="month-move-btn">이전 달</a>
+
+                <strong class="month-title"
+                        th:text="${displayDay == 0 ? dashboard.year + '년 ' + dashboard.month + '월' : dashboard.year + '년 ' + dashboard.month + '월 ' + displayDay + '일'}">
+                </strong>
+
+                <a th:if="${existNextMonth}"
+                   th:href="@{/dashboard(year=${nextYear}, month=${nextMonth})}"
+                   class="month-move-btn">다음 달</a>
+
+                <span th:unless="${existNextMonth}"
+                      class="month-move-btn disabled-btn">
+                    다음 달
+                </span>
+            </div>
+
+            <div class="dashboard-top-right"></div>
+        </div>
+
+        <div class="dashboard-main">
+
+            <div class="dashboard-left">
+                <div class="asset-trend-card top-row-card">
+                    <div class="asset-trend-header">
+                        <div>
+                            <h3>이번 달 자산 변동</h3>
+                        </div>
+                    </div>
+
+                    <div class="asset-trend-empty"
+                         th:if="${assetTrend == null or assetTrend.isEmpty()}">
+                        <p>그래프 데이터가 없습니다</p>
+                    </div>
+
+                    <div class="asset-trend-body"
+                         th:if="${assetTrend != null and !assetTrend.isEmpty()}">
+                        <canvas id="assetTrendChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="dashboard-card large-card bottom-row-card">
+                    <div class="card-header">
+                        <h2>최근 거래 5건</h2>
+                        <a th:href="@{/transactions}" class="btn-more">더보기</a>
+                    </div>
+
+                    <table class="dashboard-table recent-transaction-table">
+                        <colgroup>
+                            <col class="col-date">
+                            <col class="col-type">
+                            <col class="col-category">
+                            <col class="col-account">
+                            <col class="col-amount">
+                            <col class="col-memo">
+                        </colgroup>
+
+                        <thead>
+                        <tr>
+                            <th>날짜</th>
+                            <th>유형</th>
+                            <th>카테고리</th>
+                            <th>계좌</th>
+                            <th>금액</th>
+                            <th>메모</th>
+                        </tr>
+                        </thead>
+
+                        <tbody>
+                        <tr th:if="${#lists.isEmpty(dashboard.recentTransactions)}">
+                            <td colspan="6">거래내역이 없습니다.</td>
+                        </tr>
+
+                        <tr th:each="transaction : ${dashboard.recentTransactions}"
+                            th:onclick="|location.href='@{/transactions/{id}(id=${transaction.id})}'|"
+                            class="clickable-row">
+
+                            <td th:text="${transaction.date}"></td>
+                            <td th:classappend="${transaction.type.name() == 'INCOME'} ? 'type-income' : 'type-expense'"
+                                th:text="${transaction.type.name() == 'INCOME' ? '수입' : '지출'}"></td>
+                            <td th:text="${transaction.category}"></td>
+                            <td th:text="${transaction.bankAccountName}"></td>
+                            <td th:classappend="${transaction.type.name() == 'INCOME'} ? 'amount-income' : 'amount-expense'"
+                                th:text="${#numbers.formatInteger(transaction.amount, 3, 'COMMA')} + '원'"></td>
+                            <td th:text="${transaction.memo != null and !#strings.isEmpty(transaction.memo) ? (
+                                transaction.memo.length() > 10 ? transaction.memo.substring(0, 10) + '...' : transaction.memo)
+                                : '(내용 없음)'}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="dashboard-right">
+                <div class="dashboard-card right-summary-card top-row-card">
+                    <div class="card-header">
+                        <h2>보유 자산</h2>
+                        <a th:href="@{/bank-account}" class="btn-more">계좌 관리</a>
+                    </div>
+
+                    <p class="summary-total-text">
+                        총 자산:
+                        <span th:text="${#numbers.formatInteger(dashboard.totalBankAmount, 3, 'COMMA')}"></span>원
+                    </p>
+
+                    <table class="dashboard-table compact-summary-table bank-account-table">
+                        <thead>
+                        <tr>
+                            <th class="col-bank">은행명</th>
+                            <th class="col-account">계좌명</th>
+                            <th class="col-amount">잔액</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${#lists.isEmpty(dashboard.bankAccounts)}">
+                            <td colspan="3">등록된 계좌가 없습니다.</td>
+                        </tr>
+
+                        <tr th:each="account, stat : ${dashboard.bankAccounts}"
+                            th:if="${stat.index < 4}"
+                            th:onclick="|location.href='@{/bank-account/{id}(id=${account.id})}'|"
+                            class="clickable-row">
+                            <td th:text="${account.bankName}"></td>
+                            <td th:text="${account.accountName}"></td>
+                            <td th:text="${#numbers.formatInteger(account.balance, 3, 'COMMA')} + '원'"></td>
+                        </tr>
+
+                        <tr th:if="${dashboard.bankAccounts != null and dashboard.bankAccounts.size() > 4}"
+                            th:onclick="|location.href='@{/bank-account}'|"
+                            class="clickable-row more-row">
+                            <td colspan="3">...</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="dashboard-card right-summary-card bottom-row-card">
+                    <div class="card-header">
+                        <h2>정기지출</h2>
+                        <a th:href="@{/recurring}" class="btn-more">목록</a>
+                    </div>
+
+                    <p class="summary-total-text">
+                        이번 달 예정 지출:
+                        <span th:text="${#numbers.formatInteger(dashboard.monthlyRecurringExpenseTotal, 3, 'COMMA')}"></span>원
+                    </p>
+
+                    <table class="dashboard-table compact-summary-table recurring-summary-table">
+                        <thead>
+                        <tr>
+                            <th class="col-service">구독 서비스</th>
+                            <th class="col-date">결제일</th>
+                            <th class="col-amount">금액</th>
+                            <th class="col-account">계좌</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${#lists.isEmpty(dashboard.recurringTransactions)}">
+                            <td colspan="4">등록된 정기지출이 없습니다.</td>
+                        </tr>
+
+                        <tr th:each="recurring, stat : ${dashboard.recurringTransactions}"
+                            th:if="${stat.index < 4}"
+                            th:onclick="|location.href='@{/recurring/{id}(id=${recurring.id})}'|"
+                            class="clickable-row">
+                            <td th:text="${#strings.isEmpty(recurring.memo) ? '기타' : recurring.memo}"></td>
+                            <td th:text="|매월 ${recurring.dayOfMonth}일|"></td>
+                            <td th:text="${#numbers.formatInteger(recurring.amount, 3, 'COMMA')} + '원'"></td>
+                            <td th:text="${recurring.bankAccountName}"></td>
+                        </tr>
+
+                        <tr th:if="${dashboard.recurringTransactions != null and dashboard.recurringTransactions.size() > 4}"
+                            th:onclick="|location.href='@{/recurring}'|"
+                            class="clickable-row more-row">
+                            <td colspan="4">...</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script th:inline="javascript">
+    const assetTrend = /*[[${assetTrend}]]*/ [];
+
+    if (assetTrend && assetTrend.length > 0) {
+        const labels = assetTrend.map(item => item.label);
+        const data = assetTrend.map(item => item.amount === null ? null : item.amount);
+
+        const ctx = document.getElementById('assetTrendChart').getContext('2d');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '자산 변동',
+                    data: data,
+                    fill: true,
+                    tension: 0.35,
+                    borderWidth: 2.5,
+                    spanGaps: false,
+
+                    pointRadius: (context) => {
+                        return context.raw === null ? 0 : 2;
+                    },
+                    pointHoverRadius: (context) => {
+                        return context.raw === null ? 0 : 5;
+                    },
+
+                    pointBackgroundColor: (context) => {
+                        if (context.raw === null) return 'transparent';
+                        return context.raw < 0 ? '#e11d48' : '#2563eb';
+                    },
+                    pointBorderColor: (context) => {
+                        if (context.raw === null) return 'transparent';
+                        return context.raw < 0 ? '#e11d48' : '#2563eb';
+                    },
+
+                    segment: {
+                        borderColor: (context) => {
+                            const y0 = context.p0.parsed.y;
+                            const y1 = context.p1.parsed.y;
+
+                            if (y0 == null || y1 == null) {
+                                return 'transparent';
+                            }
+
+                            if (y0 < 0 || y1 < 0) {
+                                return '#e11d48';
+                            }
+
+                            return '#2563eb';
+                        }
+                    },
+
+                    backgroundColor: (context) => {
+                        const chart = context.chart;
+                        const { ctx, chartArea } = chart;
+
+                        if (!chartArea) {
+                            return 'rgba(37, 99, 235, 0.10)';
+                        }
+
+                        const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                        gradient.addColorStop(0, 'rgba(37, 99, 235, 0.20)');
+                        gradient.addColorStop(0.5, 'rgba(37, 99, 235, 0.08)');
+                        gradient.addColorStop(1, 'rgba(255, 255, 255, 0.02)');
+                        return gradient;
+                    }
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: '#111827',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        padding: 10,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                if (context.parsed.y == null) return '';
+                                return context.parsed.y.toLocaleString() + '원';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            maxTicksLimit: 8,
+                            color: '#6b7280'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            color: '#6b7280',
+                            callback: function(value) {
+                                return value.toLocaleString() + '원';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>

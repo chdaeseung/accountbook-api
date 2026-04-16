@@ -1,0 +1,231 @@
+.detail-page-wrap {
+    max-width: 920px;
+    margin: 0 auto;
+}
+
+.page-header {
+    margin: 32px 0 24px;
+}
+
+.page-title {
+    margin: 0 0 8px;
+    font-size: 28px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.page-description {
+    margin: 0;
+    font-size: 15px;
+    color: #6b7280;
+}
+
+.content-card {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    padding: 28px;
+    margin-bottom: 24px;
+}
+
+.card-header {
+    margin-bottom: 24px;
+}
+
+.card-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.detail-item {
+    padding: 18px 20px;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background-color: #f9fafb;
+}
+
+.detail-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.detail-label {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.detail-value {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.account-amount-box {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.account-name {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.amount {
+    font-size: 26px;
+    font-weight: 700;
+    color: #111827;
+}
+
+/* 수입 */
+.amount.income {
+    color: #1d4ed8;
+}
+
+/* 지출 */
+.amount.expense {
+    color: #dc2626;
+}
+
+.amount {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.memo-box {
+    min-height: 100px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #111827;
+    white-space: pre-wrap;
+}
+
+.type-badge {
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
+     min-width: 52px;
+     height: 28px;
+     padding: 0 10px;
+     border-radius: 999px;
+     font-size: 12px;
+     font-weight: 700;
+     box-sizing: border-box;
+}
+
+.type-badge.income {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+}
+
+.type-badge.expense {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+.recurring-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background-color: #ede9fe;
+    color: #6d28d9;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+}
+
+.primary-btn,
+.secondary-btn,
+.danger-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+    padding: 0 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.primary-btn {
+    background-color: #2563eb;
+    color: #ffffff;
+    border: none;
+}
+
+.primary-btn:hover {
+    background-color: #1d4ed8;
+}
+
+.secondary-btn {
+    background-color: #ffffff;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.secondary-btn:hover {
+    background-color: #f9fafb;
+}
+
+.danger-btn {
+    background-color: #ef4444;
+    color: #ffffff;
+    border: none;
+}
+
+.danger-btn:hover {
+    background-color: #dc2626;
+}
+
+.detail-actions form {
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .detail-actions {
+        flex-direction: column;
+    }
+
+    .primary-btn,
+    .secondary-btn,
+    .danger-btn {
+        width: 100%;
+    }
+}

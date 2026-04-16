@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>계좌 상세</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/bank-account-detail.css}">
+</head>
+<body>
+<div class="page-shell">
+    <div class="page-container">
+
+        <div th:replace="~{fragments/nav :: navbar}"></div>
+
+        <div class="detail-page">
+            <div class="detail-card">
+
+                <div class="detail-header">
+                    <div>
+                        <h2 th:text="${bankAccount.accountName}">계좌명</h2>
+                        <p th:text="${bankAccount.bankName}">은행명</p>
+                    </div>
+
+                    <div class="detail-header-actions">
+                        <a th:href="@{/bank-account}" class="btn btn-secondary">목록</a>
+                        <button type="button" class="btn btn-transfer" onclick="openTransferModal()">이체하기</button>
+                        <a th:href="@{/bank-account/{id}/update(id=${bankAccount.id})}" class="btn btn-primary">수정</a>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div>
+                            <h3>월별 지출 추이</h3>
+                            <p>지출 데이터가 있는 달만 표시됩니다.</p>
+                        </div>
+                    </div>
+
+                    <div class="chart-empty"
+                         th:if="${bankAccount.monthlyExpenses == null or bankAccount.monthlyExpenses.isEmpty()}">
+                        <p>그래프 데이터가 없습니다.</p>
+                    </div>
+
+                    <div class="chart-body"
+                         th:if="${bankAccount.monthlyExpenses != null and !bankAccount.monthlyExpenses.isEmpty()}">
+                        <canvas id="monthlyExpenseChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="summary-row">
+                    <div class="summary-large-card balance-summary-card">
+                        <span class="summary-card-label">현재 잔액</span>
+                        <strong class="summary-card-value"
+                                th:classappend="${bankAccount.balance < 0} ? 'negative' : 'positive'"
+                                th:text="${#numbers.formatInteger(bankAccount.balance, 3, 'COMMA')} + '원'">
+                            0원
+                        </strong>
+                    </div>
+
+                    <div class="summary-large-card top-category-card">
+                        <div class="top-category-header">
+                            <span class="summary-card-label">지출 TOP3 카테고리</span>
+                        </div>
+
+                        <div class="top-category-empty"
+                             th:if="${bankAccount.expenseTopCategories == null or bankAccount.expenseTopCategories.isEmpty()}">
+                            <p>지출 데이터가 없습니다.</p>
+                        </div>
+
+                        <div class="top-category-list"
+                             th:if="${bankAccount.expenseTopCategories != null and !bankAccount.expenseTopCategories.isEmpty()}">
+                            <div class="top-category-item"
+                                 th:each="item, stat : ${bankAccount.expenseTopCategories}">
+                                <div class="top-category-rank-name">
+                                    <span class="top-category-rank" th:text="${stat.count}">1</span>
+                                    <span class="top-category-name" th:text="${item.label}">식비</span>
+                                </div>
+                                <span class="top-category-amount"
+                                      th:text="${#numbers.formatInteger(item.amount, 3, 'COMMA')} + '원'">0원</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-grid two-column">
+                    <div class="info-item">
+                        <span class="info-label">계좌 유형</span>
+                        <strong class="info-value" th:text="${bankAccount.type.description}">입출금</strong>
+                    </div>
+
+                    <div class="info-item">
+                        <span class="info-label">마이너스 허용</span>
+                        <strong class="info-value">
+                            <span th:if="${bankAccount.negativeBalanceAllowed}" class="badge badge-allowed">허용</span>
+                            <span th:unless="${bankAccount.negativeBalanceAllowed}" class="badge badge-blocked">불가</span>
+                        </strong>
+                    </div>
+                </div>
+
+                <div class="detail-footer">
+                    <form th:action="@{/bank-account/{id}/delete(id=${bankAccount.id})}" method="post"
+                          onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                        <button type="submit" class="btn btn-danger">삭제</button>
+                    </form>
+                </div>
+
+                <div id="transferModal" class="transfer-modal-overlay">
+                    <div class="transfer-modal">
+                        <div class="transfer-modal-header">
+                            <h3>계좌 이체</h3>
+                            <button type="button" class="modal-close-btn" onclick="closeTransferModal()">×</button>
+                        </div>
+
+                        <form th:action="@{/transfers/create}"
+                              th:object="${transferRequestDto}"
+                              method="post"
+                              class="transfer-form">
+
+                            <input type="hidden" th:field="*{fromAccountId}">
+                            <input type="hidden" th:field="*{date}" th:value="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}">
+
+                            <div class="form-group">
+                                <label>출금 계좌</label>
+                                <input type="text"
+                                       th:value="${bankAccount.accountName}"
+                                       disabled>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="toAccountId">입금 계좌</label>
+                                <select id="toAccountId" th:field="*{toAccountId}">
+                                    <option value="">선택해주세요</option>
+                                    <option th:each="account : ${transferAccounts}"
+                                            th:value="${account.id}"
+                                            th:text="${account.accountName}">
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="amount">금액</label>
+                                <input type="number"
+                                       id="amount"
+                                       th:field="*{amount}"
+                                       placeholder="이체 금액을 입력해주세요">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="memo">메모</label>
+                                <input type="text"
+                                       id="memo"
+                                       th:field="*{memo}"
+                                       placeholder="선택 입력">
+                            </div>
+
+                            <div class="transfer-form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="closeTransferModal()">취소</button>
+                                <button type="submit" class="btn btn-primary">이체</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script th:inline="javascript">
+    const monthlyExpenses = /*[[${bankAccount.monthlyExpenses}]]*/ [];
+
+    if (monthlyExpenses && monthlyExpenses.length > 0) {
+        const labels = monthlyExpenses.map(item => item.label);
+        const data = monthlyExpenses.map(item => item.amount);
+
+        const ctx = document.getElementById('monthlyExpenseChart').getContext('2d');
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '월별 지출',
+                    data: data,
+                    backgroundColor: '#2563eb',
+                    borderRadius: 8,
+                    barThickness: 28
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: '#111827',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y.toLocaleString() + '원';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#6b7280'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            color: '#6b7280',
+                            callback: function(value) {
+                                return value.toLocaleString() + '원';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function openTransferModal() {
+        document.getElementById('transferModal').classList.add('show');
+    }
+
+    function closeTransferModal() {
+        document.getElementById('transferModal').classList.remove('show');
+    }
+
+    window.addEventListener('click', function (event) {
+        const modal = document.getElementById('transferModal');
+        if (event.target === modal) {
+            closeTransferModal();
+        }
+    });
+</script>
+</body>
+</html>

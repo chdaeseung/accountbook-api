@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>정기 지출 관리</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/recurring.css}">
+</head>
+<body>
+<div class="page-shell">
+    <div class="page-container">
+
+        <div th:replace="~{fragments/nav :: navbar}"></div>
+
+        <div class="dashboard-top-bar">
+            <div class="dashboard-summary-inline">
+                <div class="summary-item expense">
+                    <span class="summary-label">이번 달 정기 지출 합계</span>
+                    <span class="summary-value"
+                          th:text="${#numbers.formatInteger(monthlyTotalAmount, 3, 'COMMA')} + '원'"></span>
+                </div>
+            </div>
+
+            <div class="dashboard-top-right">
+                <a th:href="@{/recurring/create}" class="btn-create-recurring">정기지출 추가</a>
+            </div>
+        </div>
+
+        <div class="recurring-main">
+            <div class="dashboard-card large-card recurring-list-card">
+                <div class="card-header">
+                    <h2>정기 지출 목록</h2>
+                    <span class="recurring-count"
+                          th:text="'총 ' + ${recurringTransactions.size()} + '건'"></span>
+                </div>
+
+                <table class="dashboard-table recurring-list-table">
+                    <colgroup>
+                        <col class="col-service">
+                        <col class="col-date">
+                        <col class="col-amount">
+                        <col class="col-account">
+                    </colgroup>
+
+                    <thead>
+                    <tr>
+                        <th>구독 서비스</th>
+                        <th>결제일</th>
+                        <th>금액</th>
+                        <th>계좌</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(recurringTransactions)}">
+                        <td colspan="4">등록된 정기지출이 없습니다.</td>
+                    </tr>
+
+                    <tr th:each="recurring : ${recurringTransactions}"
+                        th:onclick="|location.href='@{/recurring/{id}(id=${recurring.id})}'|"
+                        class="clickable-row">
+                        <td th:text="${#strings.isEmpty(recurring.memo) ? '기타' : recurring.memo}"></td>
+                        <td th:text="|매월 ${recurring.dayOfMonth}일|"></td>
+                        <td th:text="${#numbers.formatInteger(recurring.amount, 3, 'COMMA')} + '원'"></td>
+                        <td th:text="${recurring.bankAccountName}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+</body>
+</html>

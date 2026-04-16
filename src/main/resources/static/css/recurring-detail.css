@@ -1,0 +1,159 @@
+.detail-page {
+    display: flex;
+    justify-content: center;
+    padding: 40px 0;
+}
+
+.detail-card {
+    width: 100%;
+    max-width: 920px;
+    background-color: #ffffff;
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    box-sizing: border-box;
+}
+
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.detail-header h2 {
+    margin: 0 0 6px 0;
+    font-size: 30px;
+    font-weight: 800;
+    color: #111827;
+}
+
+.detail-header p {
+    margin: 0;
+    font-size: 15px;
+    color: #6b7280;
+}
+
+.detail-header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.highlight-card {
+    background-color: #f8fafc;
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.highlight-label {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.highlight-value {
+    font-size: 34px;
+    font-weight: 800;
+    color: #dc2626;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+}
+
+.info-item {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.info-label {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.info-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+    word-break: keep-all;
+}
+
+.detail-footer {
+    margin-top: 28px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 92px;
+    height: 42px;
+    padding: 0 16px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.btn-primary {
+    background-color: #2563eb;
+    color: #ffffff;
+}
+
+.btn-secondary {
+    background-color: #e5e7eb;
+    color: #111827;
+}
+
+.btn-danger {
+    background-color: #dc2626;
+    color: #ffffff;
+}
+
+@media (max-width: 768px) {
+    .detail-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .detail-header-actions {
+        justify-content: flex-end;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.account-with-bank {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.account-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.bank-name {
+    font-size: 13px;
+    color: #6b7280;
+}

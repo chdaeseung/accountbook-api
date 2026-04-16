@@ -1,0 +1,107 @@
+.form-page {
+    display: flex;
+    justify-content: center;
+    padding: 40px 0;
+}
+
+.form-card {
+    width: 100%;
+    max-width: 640px;
+    background-color: #ffffff;
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    box-sizing: border-box;
+}
+
+.form-header {
+    margin-bottom: 28px;
+}
+
+.form-header h2 {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 800;
+    color: #111827;
+}
+
+.form-header p {
+    margin: 0;
+    font-size: 15px;
+    color: #6b7280;
+}
+
+.recurring-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.form-group input,
+.form-group select {
+    height: 46px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 0 14px;
+    font-size: 15px;
+    box-sizing: border-box;
+    background-color: #ffffff;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+
+.form-error {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #dc2626;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 92px;
+    height: 42px;
+    padding: 0 16px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.btn-primary {
+    background-color: #2563eb;
+    color: #ffffff;
+}
+
+.btn-secondary {
+    background-color: #e5e7eb;
+    color: #111827;
+}

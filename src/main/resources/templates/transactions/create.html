@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>거래 등록</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/nav.css}">
+    <link rel="stylesheet" th:href="@{/css/transaction-form.css}">
+</head>
+<body>
+<div class="page-container">
+    <div th:replace="~{fragments/nav :: navbar}"></div>
+
+    <div class="form-page-wrap">
+        <section class="page-header">
+            <div>
+                <h1 class="page-title">거래 등록</h1>
+                <p class="page-description">새로운 거래내역을 입력하고 저장할 수 있습니다.</p>
+            </div>
+        </section>
+
+        <section class="content-card form-card">
+            <div class="card-header">
+                <h2>기본 정보 입력</h2>
+            </div>
+
+            <form th:action="@{/transactions}"
+                  th:object="${transactionRequestDto}"
+                  method="post"
+                  class="transaction-form">
+
+                <div class="form-grid two-columns">
+                    <div class="form-group">
+                        <label for="date">거래일</label>
+                        <input type="date" id="date" th:field="*{date}">
+                        <p class="field-error"
+                           th:if="${#fields.hasErrors('date')}"
+                           th:errors="*{date}">
+                            거래일 오류
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="type">유형</label>
+                        <select id="type" th:field="*{type}">
+                            <option value="">선택해주세요</option>
+                            <option value="INCOME">수입</option>
+                            <option value="EXPENSE">지출</option>
+                        </select>
+                        <p class="field-error"
+                           th:if="${#fields.hasErrors('type')}"
+                           th:errors="*{type}">
+                            유형 오류
+                        </p>
+                    </div>
+                </div>
+
+                <div class="form-grid two-columns">
+                    <div class="form-group">
+                        <label for="categoryId">카테고리</label>
+
+                        <div class="input-with-action">
+                            <select id="categoryId" th:field="*{categoryId}">
+                                <option value="">선택해주세요</option>
+                                <option th:each="category : ${categories}"
+                                        th:value="${category.id}"
+                                        th:text="${category.name}">
+                                    식비
+                                </option>
+                            </select>
+
+                            <button type="button"
+                                    class="field-action-btn"
+                                    onclick="openCategoryModal()">
+                                관리
+                            </button>
+                        </div>
+
+                        <p class="field-error"
+                           th:if="${#fields.hasErrors('categoryId')}"
+                           th:errors="*{categoryId}">
+                            카테고리 오류
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bankAccountId">계좌</label>
+                        <select id="bankAccountId" th:field="*{bankAccountId}">
+                            <option value="">선택해주세요</option>
+                            <option th:each="account : ${bankAccounts}"
+                                    th:value="${account.id}"
+                                    th:text="${account.accountName}">
+                                국민은행
+                            </option>
+                        </select>
+                        <p class="field-error"
+                           th:if="${#fields.hasErrors('bankAccountId')}"
+                           th:errors="*{bankAccountId}">
+                            계좌 오류
+                        </p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="amount">금액</label>
+                    <input type="number"
+                           id="amount"
+                           th:field="*{amount}"
+                           placeholder="금액을 입력해주세요">
+                    <p class="field-hint">숫자만 입력해주세요.</p>
+                    <p class="field-error"
+                       th:if="${#fields.hasErrors('amount')}"
+                       th:errors="*{amount}">
+                        금액 오류
+                    </p>
+                </div>
+
+                <div class="form-group">
+                    <label for="memo">메모</label>
+                    <textarea id="memo"
+                              th:field="*{memo}"
+                              rows="4"
+                              placeholder="거래 내용을 입력해주세요. 예) 점심 식사, 월급 입금"></textarea>
+                    <p class="field-error"
+                       th:if="${#fields.hasErrors('memo')}"
+                       th:errors="*{memo}">
+                        메모 오류
+                    </p>
+                </div>
+
+                <div class="form-actions">
+                    <a th:href="@{/transactions}" class="secondary-btn">취소</a>
+                    <button type="submit" class="primary-btn">저장</button>
+                </div>
+            </form>
+        </section>
+    </div>
+</div>
+
+<!-- 카테고리 관리 모달 -->
+<div id="categoryModal" class="modal-backdrop">
+    <div class="modal-box category-modal-box">
+        <div class="modal-title-row">
+            <h3 class="modal-title">카테고리 관리</h3>
+            <button type="button" class="modal-close-btn" onclick="closeCategoryModal()">✕</button>
+        </div>
+
+        <form id="categoryCreateForm" class="category-create-form">
+            <div class="field-row">
+                <label for="newCategoryName">카테고리명</label>
+                <input type="text"
+                       id="newCategoryName"
+                       name="name"
+                       placeholder="예: 식비, 교통비">
+                <p id="categoryCreateErrorText" class="modal-field-error"></p>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="secondary-btn" onclick="closeCategoryModal()">닫기</button>
+                <button type="submit" class="primary-btn">추가</button>
+            </div>
+        </form>
+
+        <hr class="modal-divider">
+
+        <div class="category-list-section">
+            <p class="category-list-title">현재 카테고리</p>
+            <div id="categoryList" class="category-manage-list"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const deleteConfirmState = {};
+    const deleteConfirmTimer = {};
+
+    function openCategoryModal() {
+        document.getElementById("categoryModal").classList.add("show");
+        loadCategories();
+    }
+
+    function closeCategoryModal() {
+        document.getElementById("categoryModal").classList.remove("show");
+        document.getElementById("newCategoryName").value = "";
+        clearCategoryCreateError();
+        resetAllDeleteStates();
+    }
+
+    function showCategoryCreateError(message) {
+        const el = document.getElementById("categoryCreateErrorText");
+        if (el) {
+            el.textContent = message;
+        }
+    }
+
+    function clearCategoryCreateError() {
+        const el = document.getElementById("categoryCreateErrorText");
+        if (el) {
+            el.textContent = "";
+        }
+    }
+
+    function resetDeleteState(categoryId, clearMessage = true) {
+        deleteConfirmState[categoryId] = false;
+
+        const btn = document.getElementById(`delete-btn-${categoryId}`);
+        const msg = document.getElementById(`delete-msg-${categoryId}`);
+
+        if (btn) {
+            btn.classList.remove("confirm");
+        }
+
+        if (msg && clearMessage) {
+            msg.textContent = "";
+        }
+
+        if (deleteConfirmTimer[categoryId]) {
+            clearTimeout(deleteConfirmTimer[categoryId]);
+            deleteConfirmTimer[categoryId] = null;
+        }
+    }
+
+    function resetAllDeleteStates(exceptCategoryId = null) {
+        Object.keys(deleteConfirmState).forEach(id => {
+            const numericId = Number(id);
+            if (exceptCategoryId === null || numericId !== exceptCategoryId) {
+                resetDeleteState(numericId);
+            }
+        });
+    }
+
+    async function loadCategories() {
+        try {
+            const response = await fetch('/categories/api');
+
+            if (!response.ok) {
+                console.error('카테고리 조회 실패:', response.status);
+                return;
+            }
+
+            const categories = await response.json();
+
+            const categoryList = document.getElementById("categoryList");
+            const categorySelect = document.getElementById("categoryId");
+            const currentSelectedValue = categorySelect.value;
+
+            categoryList.innerHTML = "";
+            categorySelect.innerHTML = '<option value="">선택해주세요</option>';
+
+            categories.forEach(category => {
+                const row = document.createElement("div");
+                row.className = "category-manage-item";
+                row.innerHTML = `
+                    <span class="category-name">${category.name}</span>
+
+                    <div class="category-action-area">
+                        <span class="delete-message" id="delete-msg-${category.id}"></span>
+
+                        <button type="button"
+                                class="delete-category-btn"
+                                id="delete-btn-${category.id}"
+                                onclick="handleDeleteClick(${category.id})">
+                            삭제
+                        </button>
+                    </div>
+                `;
+                categoryList.appendChild(row);
+
+                const option = document.createElement("option");
+                option.value = category.id;
+                option.textContent = category.name;
+
+                if (String(category.id) === String(currentSelectedValue)) {
+                    option.selected = true;
+                }
+
+                categorySelect.appendChild(option);
+            });
+
+        } catch (error) {
+            console.error("loadCategories 오류:", error);
+        }
+    }
+
+    document.getElementById("categoryCreateForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
+
+        const input = document.getElementById("newCategoryName");
+        const name = input.value.trim();
+
+        clearCategoryCreateError();
+
+        if (!name) {
+            showCategoryCreateError("카테고리명을 입력해주세요.");
+            return;
+        }
+
+        try {
+            const response = await fetch('/categories/api', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name: name })
+            });
+
+            if (!response.ok) {
+                const message = await response.text();
+                showCategoryCreateError(message || "이미 등록된 카테고리입니다.");
+                return;
+            }
+
+            input.value = "";
+            clearCategoryCreateError();
+            await loadCategories();
+
+        } catch (error) {
+            console.error("카테고리 추가 오류:", error);
+            showCategoryCreateError("카테고리 추가 중 오류가 발생했습니다.");
+        }
+    });
+
+    async function handleDeleteClick(categoryId) {
+        const btn = document.getElementById(`delete-btn-${categoryId}`);
+        const msg = document.getElementById(`delete-msg-${categoryId}`);
+
+        if (!btn || !msg) {
+            return;
+        }
+
+        if (deleteConfirmState[categoryId]) {
+            await deleteCategory(categoryId);
+            return;
+        }
+
+        resetAllDeleteStates(categoryId);
+
+        try {
+            const response = await fetch(`/categories/api/${categoryId}/delete-check`);
+
+            if (!response.ok) {
+                const message = await response.text();
+                msg.textContent = message || "사용중인 카테고리입니다.";
+                deleteConfirmState[categoryId] = false;
+                btn.classList.remove("confirm");
+                return;
+            }
+
+            msg.textContent = "삭제하시겠습니까?";
+            btn.classList.add("confirm");
+            deleteConfirmState[categoryId] = true;
+
+            deleteConfirmTimer[categoryId] = setTimeout(() => {
+                resetDeleteState(categoryId);
+            }, 3000);
+
+        } catch (error) {
+            console.error("삭제 확인 오류:", error);
+            msg.textContent = "확인 중 오류가 발생했습니다.";
+        }
+    }
+
+    async function deleteCategory(categoryId) {
+        const msg = document.getElementById(`delete-msg-${categoryId}`);
+        const btn = document.getElementById(`delete-btn-${categoryId}`);
+
+        try {
+            const response = await fetch(`/categories/api/${categoryId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                const message = await response.text();
+                msg.textContent = message || "삭제할 수 없습니다.";
+                deleteConfirmState[categoryId] = false;
+                btn.classList.remove("confirm");
+                return;
+            }
+
+            resetDeleteState(categoryId);
+            await loadCategories();
+
+        } catch (error) {
+            console.error("카테고리 삭제 오류:", error);
+            msg.textContent = "삭제 중 오류가 발생했습니다.";
+            deleteConfirmState[categoryId] = false;
+            btn.classList.remove("confirm");
+        }
+    }
+
+    window.addEventListener("click", function (e) {
+        const modal = document.getElementById("categoryModal");
+        if (e.target === modal) {
+            closeCategoryModal();
+        }
+    });
+</script>
+</body>
+</html>
