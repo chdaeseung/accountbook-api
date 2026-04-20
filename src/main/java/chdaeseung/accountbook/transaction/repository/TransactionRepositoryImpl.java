@@ -77,7 +77,8 @@ public class TransactionRepositoryImpl implements TransactionRepositoryCustom {
                         typeEq(searchDto.getType(), transaction),
                         expenseTypeEq(searchDto.getExpenseType(), transaction),
                         eqBankAccountId(searchDto.getBankAccountId()),
-                        memoContains(searchDto.getMemoKeyword())
+                        memoContains(searchDto.getMemoKeyword()),
+                        recurringEq(searchDto.getRecurring(), transaction)
                 )
                 .orderBy(transaction.date.desc(), transaction.id.desc())
                 .offset(pageable.getOffset())
@@ -96,7 +97,8 @@ public class TransactionRepositoryImpl implements TransactionRepositoryCustom {
                         typeEq(searchDto.getType(), transaction),
                         expenseTypeEq(searchDto.getExpenseType(), transaction),
                         eqBankAccountId(searchDto.getBankAccountId()),
-                        memoContains(searchDto.getMemoKeyword())
+                        memoContains(searchDto.getMemoKeyword()),
+                        recurringEq(searchDto.getRecurring(), transaction)
                 )
                 .fetchOne();
 
@@ -178,5 +180,13 @@ public class TransactionRepositoryImpl implements TransactionRepositoryCustom {
 
     private BooleanExpression memoContains(String memoKeyword) {
         return StringUtils.hasText(memoKeyword) ? transaction.memo.contains(memoKeyword) : null;
+    }
+
+    private BooleanExpression recurringEq(Boolean recurring, QTransaction transaction) {
+        if(recurring == null) {
+            return null;
+        }
+
+        return recurring ? transaction.recurringTransaction.isNotNull() : transaction.recurringTransaction.isNull();
     }
 }

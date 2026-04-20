@@ -32,7 +32,7 @@ public class TransactionService {
     private final CategoryRepository categoryRepository;
     private final BankAccountRepository bankAccountRepository;
 
-    public void createTransaction(TransactionRequestDto requestDto, Long userId) {
+    public Long createTransaction(TransactionRequestDto requestDto, Long userId) {
         validateTransactionRequest(requestDto);
 
         User user = userRepository.findById(userId)
@@ -63,7 +63,9 @@ public class TransactionService {
                 .bankAccount(bankAccount)
                 .build();
 
-        transactionRepository.save(transaction);
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        return savedTransaction.getId();
     }
 
     private BankAccount getBankAccountOrNull(Long bankAccountId, Long userId) {
