@@ -56,7 +56,7 @@ public class TransactionController {
     }
 
     @PostMapping
-    public String createTransaction(@Valid @ModelAttribute TransactionRequestDto transactionRequestDto, BindingResult bindingResult, @AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
+    public String createTransaction(@Valid @ModelAttribute TransactionCreateRequestDto transactionRequestDto, BindingResult bindingResult, @AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
         Long userId = userDetails.getUserId();
 
         if(bindingResult.hasErrors()) {
@@ -74,7 +74,7 @@ public class TransactionController {
     public String create(Model model, @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long userId = userDetails.getUserId();
 
-        model.addAttribute("transactionRequestDto", new TransactionRequestDto());
+        model.addAttribute("transactionRequestDto", new TransactionCreateRequestDto());
         model.addAttribute("categories", categoryService.getCategories(userId));
         model.addAttribute("bankAccounts", bankAccountService.getUsedOptions(userId));
 
@@ -97,7 +97,7 @@ public class TransactionController {
     public String updateTransaction(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
         Long userId = userDetails.getUserId();
 
-        TransactionRequestDto transaction = transactionService.transactionUpdate(id, userId);
+        TransactionUpdateRequestDto transaction = transactionService.transactionUpdate(id, userId);
 
         model.addAttribute("transactionId", id);
         model.addAttribute("transactionRequestDto", transaction);
@@ -108,7 +108,7 @@ public class TransactionController {
     }
 
     @PostMapping("/{id}/update")
-    public String updateTransaction(@PathVariable Long id, @Valid @ModelAttribute TransactionRequestDto transactionRequestDto, BindingResult bindingResult, @AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
+    public String updateTransaction(@PathVariable Long id, @Valid @ModelAttribute TransactionUpdateRequestDto transactionRequestDto, BindingResult bindingResult, @AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
         Long userId = userDetails.getUserId();
 
         if(bindingResult.hasErrors()) {

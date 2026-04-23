@@ -24,7 +24,7 @@ public class TransactionUpdateRequestDto {
     private ExpenseType expenseType;
 
     @Min(value = 1, message = "금액은 1원 이상 입력해주세요.")
-    private int amount;
+    private Long amount;
 
     private String memo;
 

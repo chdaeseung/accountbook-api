@@ -1,6 +1,7 @@
 package chdaeseung.accountbook.transfer.controller;
 
 import chdaeseung.accountbook.bank.service.BankAccountService;
+import chdaeseung.accountbook.transfer.dto.TransferCreateRequestDto;
 import chdaeseung.accountbook.transfer.dto.TransferRequestDto;
 import chdaeseung.accountbook.transfer.service.TransferService;
 import chdaeseung.accountbook.user.service.CustomUserDetails;
@@ -32,10 +33,10 @@ public class TransferController {
     }
 
     @PostMapping("/create")
-    public String createTransfer(@AuthenticationPrincipal CustomUserDetails userDetails, @ModelAttribute TransferRequestDto transferRequestDto) {
+    public String createTransfer(@AuthenticationPrincipal CustomUserDetails userDetails, @ModelAttribute TransferCreateRequestDto transferRequestDto) {
         Long userId = userDetails.getUserId();
 
-        transferService.createTransfer(userId, transferRequestDto);
+        transferService.createTransfer(transferRequestDto, userId);
         return "redirect:/dashboard";
     }
 }

@@ -74,4 +74,12 @@ public class TransactionApiController {
         return ResponseEntity.ok(response);
     }
 
+    @PatchMapping("/{transactionId}")
+    public ResponseEntity<TransactionUpdateResponseDto> patchTransaction(@PathVariable Long transactionId, @Valid @RequestBody TransactionPatchRequestDto dto, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        transactionService.patchTransaction(transactionId, userDetails.getUserId(), dto);
+        TransactionUpdateResponseDto response = new TransactionUpdateResponseDto(transactionId, "거래가 부분 수정되었습니다");
+
+        return ResponseEntity.ok(response);
+    }
+
 }

@@ -20,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -32,8 +33,8 @@ public class TransactionService {
     private final CategoryRepository categoryRepository;
     private final BankAccountRepository bankAccountRepository;
 
-    public Long createTransaction(TransactionRequestDto requestDto, Long userId) {
-        validateTransactionRequest(requestDto);
+    public Long createTransaction(TransactionCreateRequestDto requestDto, Long userId) {
+        validateTransactionRequest(requestDto.getDate(), requestDto.getCategoryId(), requestDto.getType(), requestDto.getAmount(), requestDto.getBankAccountId());
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -45,11 +46,9 @@ public class TransactionService {
 
         String memo = requestDto.getMemo() == null ? "" : requestDto.getMemo().trim();
 
-        BankAccount bankAccount = getBankAccountOrNull(requestDto.getBankAccountId(), userId);
+        BankAccount bankAccount = getRequiredBankAccount(requestDto.getBankAccountId(), userId);
 
-        if(bankAccount != null) {
-            applyBalance(bankAccount, requestDto.getType(), requestDto.getAmount());
-        }
+        applyBalance(bankAccount, requestDto.getType(), requestDto.getAmount());
 
         Transaction transaction = Transaction.builder()
                 .type(requestDto.getType())
@@ -68,9 +67,9 @@ public class TransactionService {
         return savedTransaction.getId();
     }
 
-    private BankAccount getBankAccountOrNull(Long bankAccountId, Long userId) {
+    private BankAccount getRequiredBankAccount(Long bankAccountId, Long userId) {
         if(bankAccountId == null) {
-            return null;
+            throw new CustomException(ErrorCode.ACCOUNT_NOT_FOUND);
         }
 
         return bankAccountRepository.findByIdAndUserId(bankAccountId, userId)
@@ -111,10 +110,10 @@ public class TransactionService {
     }
 
     @Transactional(readOnly = true)
-    public TransactionRequestDto transactionUpdate(Long transactionId, Long userId) {
+    public TransactionUpdateRequestDto transactionUpdate(Long transactionId, Long userId) {
         Transaction transaction = getOwnedTransaction(transactionId, userId);
 
-        TransactionRequestDto dto = new TransactionRequestDto();
+        TransactionUpdateRequestDto dto = new TransactionUpdateRequestDto();
         dto.setType(transaction.getType());
         dto.setAmount(transaction.getAmount());
         dto.setCategoryId(transaction.getCategory().getId());
@@ -129,8 +128,8 @@ public class TransactionService {
     }
 
     @Transactional
-    public void updateTransaction(Long transactionId, Long userId, TransactionRequestDto requestDto) {
-        validateTransactionRequest(requestDto);
+    public void updateTransaction(Long transactionId, Long userId, TransactionUpdateRequestDto requestDto) {
+        validateTransactionRequest(requestDto.getDate(), requestDto.getCategoryId(), requestDto.getType(), requestDto.getAmount(), requestDto.getBankAccountId());
 
         Transaction transaction = getOwnedTransaction(transactionId, userId);
 
@@ -142,14 +141,10 @@ public class TransactionService {
         String memo = requestDto.getMemo() == null ? "" : requestDto.getMemo().trim();
 
         BankAccount oldBankAccount = transaction.getBankAccount();
-        if(oldBankAccount != null) {
-            rollbackBalance(oldBankAccount, transaction.getType(), transaction.getAmount());
-        }
+        rollbackBalance(oldBankAccount, transaction.getType(), transaction.getAmount());
 
-        BankAccount newBankAccount = getBankAccountOrNull(requestDto.getBankAccountId(), userId);
-        if(requestDto.getBankAccountId() != null) {
-            applyBalance(newBankAccount, requestDto.getType(), requestDto.getAmount());
-        }
+        BankAccount newBankAccount = getRequiredBankAccount(requestDto.getBankAccountId(), userId);
+        applyBalance(newBankAccount, requestDto.getType(), requestDto.getAmount());
 
         transaction.update(
                 requestDto.getType(),
@@ -159,7 +154,7 @@ public class TransactionService {
                 memo,
                 requestDto.getDate(),
                 newBankAccount
-                );
+        );
     }
 
     private Transaction getOwnedTransaction(Long transactionId, Long userId) {
@@ -236,21 +231,46 @@ public class TransactionService {
         return ExpenseType.VARIABLE;
     }
 
-    private void validateTransactionRequest(TransactionRequestDto requestDto) {
-        if(requestDto.getDate() == null) {
+    private void validateTransactionRequest(LocalDate date, Long categoryId, TransactionType type, Long amount, Long bankAccountId) {
+        if(date == null) {
             throw new CustomException(ErrorCode.INSERT_DATE);
         }
 
-        if(requestDto.getCategoryId() == null) {
+        if(categoryId == null) {
             throw new CustomException(ErrorCode.CHOOSE_CATEGORY);
         }
 
-        if(requestDto.getType() == null) {
+        if(type == null) {
             throw new CustomException(ErrorCode.CHOOSE_TYPE);
         }
 
-        if(requestDto.getAmount() == null || requestDto.getAmount() <= 0) {
+        if(amount == null || amount <= 0) {
             throw new CustomException(ErrorCode.MINIMUM_AMOUNT);
         }
+
+        if(bankAccountId == null) {
+            throw new CustomException(ErrorCode.ACCOUNT_NOT_FOUND);
+        }
+    }
+
+    @Transactional
+    public void patchTransaction(Long transactionId, Long userId, TransactionPatchRequestDto requestDto) {
+        if(requestDto.hasNoChanges()) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST);
+        }
+
+        Transaction transaction = getOwnedTransaction(transactionId, userId);
+
+        TransactionUpdateRequestDto mergedDto = new TransactionUpdateRequestDto();
+        mergedDto.setDate(requestDto.getDate() != null ? requestDto.getDate() : transaction.getDate());
+        mergedDto.setCategoryId(requestDto.getCategoryId() != null ? requestDto.getCategoryId() : transaction.getCategory().getId());
+        mergedDto.setType(requestDto.getType() != null ? requestDto.getType() : transaction.getType());
+        mergedDto.setAmount(requestDto.getAmount() != null ? requestDto.getAmount() : transaction.getAmount());
+        mergedDto.setMemo(requestDto.getMemo() != null ? requestDto.getMemo() : transaction.getMemo());
+
+        Long curBankAccountId = transaction.getBankAccount() != null ? transaction.getBankAccount().getId() : null;
+        mergedDto.setBankAccountId(requestDto.getBankAccountId() != null ? requestDto.getBankAccountId() : curBankAccountId);
+
+        updateTransaction(transactionId, userId, mergedDto);
     }
 }
