@@ -4,9 +4,7 @@ import chdaeseung.accountbook.bank.entity.BankAccount;
 import chdaeseung.accountbook.bank.repository.BankAccountRepository;
 import chdaeseung.accountbook.global.exception.CustomException;
 import chdaeseung.accountbook.global.exception.ErrorCode;
-import chdaeseung.accountbook.recurring.dto.RecurringDashboardResponseDto;
 import chdaeseung.accountbook.recurring.dto.RecurringTransactionCreateDto;
-import chdaeseung.accountbook.recurring.dto.RecurringTransactionListResponseDto;
 import chdaeseung.accountbook.recurring.dto.RecurringTransactionResponseDto;
 import chdaeseung.accountbook.recurring.entity.RecurringTransaction;
 import chdaeseung.accountbook.recurring.repository.RecurringTransactionRepository;
@@ -34,16 +32,14 @@ public class RecurringTransactionService {
                 .toList();
     }
 
-    public void createRecurringTransaction(Long userId, RecurringTransactionCreateDto createDto) {
+    public Long createRecurringTransaction(Long userId, RecurringTransactionCreateDto createDto) {
         validateRecurring(createDto);
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        BankAccount bankAccount = bankAccountRepository.findById(createDto.getBankAccountId())
+        BankAccount bankAccount = bankAccountRepository.findByIdAndUserId(createDto.getBankAccountId(), userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
-
-        validateBankAccount(userId, bankAccount);
 
         RecurringTransaction recurringTransaction = RecurringTransaction.builder()
                 .memo(createDto.getMemo())
@@ -53,7 +49,7 @@ public class RecurringTransactionService {
                 .user(user)
                 .build();
 
-        recurringTransactionRepository.save(recurringTransaction);
+        return recurringTransactionRepository.save(recurringTransaction).getId();
     }
 
     @Transactional(readOnly = true)
@@ -70,10 +66,8 @@ public class RecurringTransactionService {
         RecurringTransaction recurringTransaction = recurringTransactionRepository.findByIdAndUserId(recurringId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RECURRING_NOT_FOND));
 
-        BankAccount bankAccount = bankAccountRepository.findById(createDto.getBankAccountId())
+        BankAccount bankAccount = bankAccountRepository.findByIdAndUserId(createDto.getBankAccountId(), userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
-
-        validateBankAccount(userId, bankAccount);
 
         recurringTransaction.update(
                 createDto.getMemo(),
@@ -104,31 +98,6 @@ public class RecurringTransactionService {
         return dto;
     }
 
-    @Transactional(readOnly = true)
-    public RecurringDashboardResponseDto getRecurringDashboard(Long userId) {
-        List<RecurringTransaction> recurringTransactions =
-                recurringTransactionRepository.findAllByUserIdOrderByDayOfMonthAsc(userId);
-
-        List<RecurringTransactionListResponseDto> recurringDtos = recurringTransactions.stream()
-                .map(recurring -> new RecurringTransactionListResponseDto(
-                        recurring.getId(),
-                        recurring.getMemo(),
-                        recurring.getDayOfMonth(),
-                        recurring.getAmount(),
-                        recurring.getBankAccount().getAccountName()
-                ))
-                .toList();
-
-        long monthlyTotalAmount = recurringTransactions.stream()
-                .mapToLong(RecurringTransaction::getAmount)
-                .sum();
-
-        return RecurringDashboardResponseDto.builder()
-                .monthlyTotalAmount(monthlyTotalAmount)
-                .recurringTransactions(recurringDtos)
-                .build();
-    }
-
     private void validateRecurring(RecurringTransactionCreateDto createDto) {
         if (createDto.getAmount() == null || createDto.getAmount() <= 0) {
             throw new CustomException(ErrorCode.MINIMUM_AMOUNT);
@@ -140,12 +109,6 @@ public class RecurringTransactionService {
 
         if (createDto.getBankAccountId() == null) {
             throw new CustomException(ErrorCode.ACCOUNT_NOT_FOUND);
-        }
-    }
-
-    private void validateBankAccount(Long userId, BankAccount bankAccount) {
-        if (!bankAccount.getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
         }
     }
 }

@@ -25,8 +25,12 @@ public class UserService {
     private final CategoryRepository categoryRepository;
 
     @Transactional
-    public void signup(SignupRequestDto requestDto) {
+    public Long signup(SignupRequestDto requestDto) {
         existsUser(requestDto);
+
+        if(!requestDto.getPassword().equals(requestDto.getPasswordConfirm())) {
+            throw new CustomException(ErrorCode.PASSWORD_MISMATCH);
+        }
 
         String encodedPassword = passwordEncoder.encode(requestDto.getPassword());
 
@@ -37,6 +41,8 @@ public class UserService {
                 .name("이체")
                 .user(savedUser)
                 .build());
+
+        return savedUser.getId();
     }
 
     private void existsUser(SignupRequestDto requestDto) {
