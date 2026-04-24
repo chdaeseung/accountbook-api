@@ -19,8 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -38,10 +37,25 @@ public class TransferService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        BankAccount fromAccount = getOwnedBankAccount(requestDto.getFromBankAccountId(), userId);
-        BankAccount toAccount = getOwnedBankAccount(requestDto.getToBankAccountId(), userId);
+        Long fromAccountId = requestDto.getFromBankAccountId();
+        Long toAccountId = requestDto.getToBankAccountId();
 
-        validateDifferentAccounts(fromAccount.getId(), toAccount.getId());
+        validateDifferentAccounts(fromAccountId, toAccountId);
+
+        BankAccount firstLockedAccount;
+        BankAccount secondLockedAccount;
+
+        if(fromAccountId < toAccountId) {
+            firstLockedAccount = getOwnedBankAccountForUpdate(fromAccountId, userId);
+            secondLockedAccount = getOwnedBankAccountForUpdate(toAccountId, userId);
+        } else {
+            firstLockedAccount = getOwnedBankAccountForUpdate(toAccountId, userId);
+            secondLockedAccount = getOwnedBankAccountForUpdate(fromAccountId, userId);
+        }
+
+        BankAccount fromAccount = firstLockedAccount.getId().equals(fromAccountId) ? firstLockedAccount : secondLockedAccount;
+        BankAccount toAccount = firstLockedAccount.getId().equals(toAccountId) ? firstLockedAccount : secondLockedAccount;
+
         validateSufficientBalance(fromAccount, requestDto.getAmount());
 
         Category transferCategory = getTransferCategory(userId);
@@ -75,12 +89,38 @@ public class TransferService {
         Transaction withdrawTransaction = findWithdrawTransaction(transferTransactions);
         Transaction depositTransaction = findDepositTransaction(transferTransactions);
 
-        rollbackTransferBalances(withdrawTransaction, depositTransaction);
+        Long oldFromId = withdrawTransaction.getBankAccount().getId();
+        Long oldToId = depositTransaction.getBankAccount().getId();
 
-        BankAccount newFromAccount = getOwnedBankAccount(requestDto.getFromBankAccountId(), userId);
-        BankAccount newToAccount = getOwnedBankAccount(requestDto.getToBankAccountId(), userId);
+        Long newFromId = requestDto.getFromBankAccountId();
+        Long newToId = requestDto.getToBankAccountId();
 
-        validateDifferentAccounts(newFromAccount.getId(), newToAccount.getId());
+        validateDifferentAccounts(newFromId, newToId);
+
+        Set<Long> accountIds = new HashSet<>();
+        accountIds.add(oldFromId);
+        accountIds.add(oldToId);
+        accountIds.add(newFromId);
+        accountIds.add(newToId);
+
+        List<Long> sortedIds = accountIds.stream().sorted().toList();
+
+        Map<Long, BankAccount> accountMap = new HashMap<>();
+
+        for(Long id : sortedIds) {
+            BankAccount account = getOwnedBankAccountForUpdate(id, userId);
+            accountMap.put(id, account);
+        }
+
+        BankAccount oldFromAccount = accountMap.get(oldFromId);
+        BankAccount oldToAccount = accountMap.get(oldToId);
+
+        BankAccount newFromAccount = accountMap.get(newFromId);
+        BankAccount newToAccount = accountMap.get(newToId);
+
+        oldFromAccount.increaseBalance(withdrawTransaction.getAmount());
+        oldToAccount.decreaseBalance(depositTransaction.getAmount());
+
         validateSufficientBalance(newFromAccount, requestDto.getAmount());
 
         Category transferCategory = getTransferCategory(userId);
@@ -108,11 +148,6 @@ public class TransferService {
 
         newFromAccount.decreaseBalance(requestDto.getAmount());
         newToAccount.increaseBalance(requestDto.getAmount());
-    }
-
-    private void rollbackTransferBalances(Transaction withdrawTransaction, Transaction depositTransaction) {
-        withdrawTransaction.getBankAccount().increaseBalance(withdrawTransaction.getAmount());
-        depositTransaction.getBankAccount().decreaseBalance(depositTransaction.getAmount());
     }
 
     private Transaction findDepositTransaction(List<Transaction> transferTransactions) {
@@ -198,8 +233,8 @@ public class TransferService {
                 .build();
     }
 
-    private BankAccount getOwnedBankAccount(Long bankAccountId, Long userId) {
-        return bankAccountRepository.findByIdAndUserId(bankAccountId, userId)
+    private BankAccount getOwnedBankAccountForUpdate(Long bankAccountId, Long userId) {
+        return bankAccountRepository.findByIdAndUserIdForUpdate(bankAccountId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
     }
 

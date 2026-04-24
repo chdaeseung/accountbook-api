@@ -35,7 +35,11 @@ public class SecurityConfig {
                                 "/users/login",
                                 "/css/**",
                                 "/js/**",
-                                "/images/**"
+                                "/images/**",
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/api/**"
                         ).permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form

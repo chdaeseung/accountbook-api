@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -46,7 +46,11 @@ public class TransactionService {
 
         String memo = requestDto.getMemo() == null ? "" : requestDto.getMemo().trim();
 
-        BankAccount bankAccount = getRequiredBankAccount(requestDto.getBankAccountId(), userId);
+        BankAccount bankAccount = getRequiredBankAccountForUpdate(requestDto.getBankAccountId(), userId);
+
+        if(requestDto.getType() == TransactionType.EXPENSE) {
+            validateSufficientBalance(bankAccount, requestDto.getAmount());
+        }
 
         applyBalance(bankAccount, requestDto.getType(), requestDto.getAmount());
 
@@ -67,12 +71,12 @@ public class TransactionService {
         return savedTransaction.getId();
     }
 
-    private BankAccount getRequiredBankAccount(Long bankAccountId, Long userId) {
+    private BankAccount getRequiredBankAccountForUpdate(Long bankAccountId, Long userId) {
         if(bankAccountId == null) {
             throw new CustomException(ErrorCode.ACCOUNT_NOT_FOUND);
         }
 
-        return bankAccountRepository.findByIdAndUserId(bankAccountId, userId)
+        return bankAccountRepository.findByIdAndUserIdForUpdate(bankAccountId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
     }
 
@@ -140,10 +144,32 @@ public class TransactionService {
 
         String memo = requestDto.getMemo() == null ? "" : requestDto.getMemo().trim();
 
-        BankAccount oldBankAccount = transaction.getBankAccount();
+        Long oldBankAccountId = transaction.getBankAccount().getId();
+        Long newBankAccountId = requestDto.getBankAccountId();
+
+        Set<Long> accountIds = new HashSet<>();
+        accountIds.add(oldBankAccountId);
+        accountIds.add(newBankAccountId);
+
+        List<Long> sortedIds = accountIds.stream()
+                .sorted()
+                .toList();
+
+        Map<Long, BankAccount> accountMap = new HashMap<>();
+        for(Long id : sortedIds) {
+            BankAccount account = getRequiredBankAccountForUpdate(id, userId);
+            accountMap.put(id, account);
+        }
+
+        BankAccount oldBankAccount = accountMap.get(oldBankAccountId);
+        BankAccount newBankAccount = accountMap.get(newBankAccountId);
+
         rollbackBalance(oldBankAccount, transaction.getType(), transaction.getAmount());
 
-        BankAccount newBankAccount = getRequiredBankAccount(requestDto.getBankAccountId(), userId);
+        if(requestDto.getType() == TransactionType.EXPENSE) {
+            validateSufficientBalance(newBankAccount, requestDto.getAmount());
+        }
+
         applyBalance(newBankAccount, requestDto.getType(), requestDto.getAmount());
 
         transaction.update(
@@ -157,38 +183,58 @@ public class TransactionService {
         );
     }
 
+    private void validateSufficientBalance(BankAccount bankAccount, Long amount) {
+        if(bankAccount.getBalance() < amount) {
+            throw new CustomException(ErrorCode.INSUFFICIENT_BALANCE);
+        }
+    }
+
     private Transaction getOwnedTransaction(Long transactionId, Long userId) {
         return transactionRepository.findByIdAndUserId(transactionId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TRANSACTION_NOT_FOUND));
     }
+
+
 
     @Transactional
     public void deleteTransaction(Long transactionId, Long userId) {
         Transaction transaction = getOwnedTransaction(transactionId, userId);
 
         if(!transaction.isTransfer()) {
-            if (transaction.getBankAccount() != null) {
-                rollbackBalance(transaction.getBankAccount(), transaction.getType(), transaction.getAmount());
-            }
+            Long bankAccountId = transaction.getBankAccount().getId();
+            BankAccount bankAccount = getRequiredBankAccountForUpdate(bankAccountId, userId);
+
+            rollbackBalance(bankAccount, transaction.getType(), transaction.getAmount());
             transactionRepository.delete(transaction);
             return;
         }
 
-        if(transaction.getTransferGroupKey() == null || transaction.getTransferGroupKey().isBlank()) {
+        String transferGroupKey = transaction.getTransferGroupKey();
+        if(transferGroupKey == null || transferGroupKey.isBlank()) {
             throw new CustomException(ErrorCode.TRANSACTION_NOT_FOUND);
         }
 
         List<Transaction> transferTransactions =
                 transactionRepository.findAllByTransferGroupKeyAndUserId(transaction.getTransferGroupKey(), userId);
 
+        Set<Long> accountIds = new HashSet<>();
         for(Transaction transferTransaction : transferTransactions) {
-            if(transferTransaction.getBankAccount() != null) {
-                rollbackBalance(
-                        transferTransaction.getBankAccount(),
-                        transferTransaction.getType(),
-                        transferTransaction.getAmount()
-                );
-            }
+            accountIds.add(transferTransaction.getBankAccount().getId());
+        }
+
+        List<Long> sortedIds = accountIds.stream()
+                .sorted()
+                .toList();
+
+        Map<Long, BankAccount> accountMap = new HashMap<>();
+        for(Long id : sortedIds) {
+            BankAccount account = getRequiredBankAccountForUpdate(id, userId);
+            accountMap.put(id, account);
+        }
+
+        for(Transaction transferTransaction : transferTransactions) {
+            BankAccount bankAccount = accountMap.get(transferTransaction.getBankAccount().getId());
+            rollbackBalance(bankAccount, transferTransaction.getType(), transferTransaction.getAmount());
         }
 
         transactionRepository.deleteAll(transferTransactions);

@@ -2,6 +2,7 @@ package chdaeseung.accountbook.transaction.dto;
 
 import chdaeseung.accountbook.transaction.entity.ExpenseType;
 import chdaeseung.accountbook.transaction.entity.TransactionType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -9,6 +10,7 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 
+@Schema(description = "거래 생성 요청 DTO")
 @Getter
 @Setter
 public class TransactionCreateRequestDto {
@@ -23,6 +25,7 @@ public class TransactionCreateRequestDto {
 
     private ExpenseType expenseType;
 
+    @Schema(description = "거래 금액", example = "10000")
     @Min(value = 1, message = "금액은 1원 이상 입력해주세요.")
     private Long amount;
 
