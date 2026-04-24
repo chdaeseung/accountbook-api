@@ -55,17 +55,6 @@ public class UserService {
         }
     }
 
-    public User login(LoginRequestDto requestDto) {
-        User user = userRepository.findByUsername(requestDto.getUsername())
-                .orElseThrow(() -> new CustomException(ErrorCode.INCORRECT_ACCOUNT));
-
-//        if (!passwordEncoder.matches(requestDto.getPassword(), user.getPassword())) {
-//            throw new CustomException(ErrorCode.INCORRECT_ACCOUNT);
-//        }
-
-        return user;
-    }
-
     @Transactional(readOnly = true)
     public Long getUserIdByUsername(String username) {
         return userRepository.findByUsername(username)

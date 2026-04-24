@@ -1,5 +1,6 @@
 package chdaeseung.accountbook.global.config;
 
+import chdaeseung.accountbook.global.security.jwt.JwtAuthenticationFilter;
 import chdaeseung.accountbook.user.service.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -8,9 +9,11 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -18,45 +21,28 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     private final CustomUserDetailsService customUserDetailsService;
-
-//    @Bean
-//    public BCryptPasswordEncoder passwordEncoder() {
-//        return new BCryptPasswordEncoder();
-//    }
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
+                .formLogin(form -> form.disable())
+                .httpBasic(httpBasic -> httpBasic.disable())
+                .logout(logout -> logout.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/",
-                                "/users/signup",
-                                "/users/login",
-                                "/css/**",
-                                "/js/**",
-                                "/images/**",
+                                "/api/users/signup",
+                                "/api/users/login",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/api/**"
+                                "/v3/api-docs/**"
                         ).permitAll()
                         .anyRequest().authenticated())
-                .formLogin(form -> form
-                        .loginPage("/users/login")
-                        .loginProcessingUrl("/users/login")
-                        .usernameParameter("username")
-                        .passwordParameter("password")
-                        .defaultSuccessUrl("/dashboard", true)
-                        .failureUrl("/users/login?error=true")
-                        .permitAll()
-                )
-                .logout(logout -> logout
-                        .logoutUrl("/users/logout")
-                        .logoutSuccessUrl("/users/login")
-                        .invalidateHttpSession(true)
-                        .deleteCookies("JSESSIONID"))
-                .userDetailsService(customUserDetailsService);
+                .userDetailsService(customUserDetailsService)
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
