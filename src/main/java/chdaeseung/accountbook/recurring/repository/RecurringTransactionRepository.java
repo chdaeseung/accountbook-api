@@ -7,12 +7,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-public interface RecurringTransactionRepository extends JpaRepository<RecurringTransaction, Long>, RecurringTransactionRepositoryCustom {
+public interface RecurringTransactionRepository extends JpaRepository<RecurringTransaction, Long> {
     List<RecurringTransaction> findAllByUserIdOrderByDayOfMonthAsc(Long userId);
 
     Optional<RecurringTransaction> findByIdAndUserId(Long id, Long userId);
 
     List<RecurringTransaction> findAllByDayOfMonth(Integer dayOfMonth);
-
-    List<RecurringTransaction> findAllByUserId(Long userId);
 }

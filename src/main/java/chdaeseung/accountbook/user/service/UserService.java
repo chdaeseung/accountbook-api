@@ -1,5 +1,8 @@
 package chdaeseung.accountbook.user.service;
 
+import chdaeseung.accountbook.category.entity.Category;
+import chdaeseung.accountbook.category.repository.CategoryRepository;
+import chdaeseung.accountbook.category.service.CategoryService;
 import chdaeseung.accountbook.global.exception.CustomException;
 import chdaeseung.accountbook.global.exception.ErrorCode;
 import chdaeseung.accountbook.user.dto.LoginRequestDto;
@@ -19,15 +22,21 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CategoryRepository categoryRepository;
 
+    @Transactional
     public void signup(SignupRequestDto requestDto) {
         existsUser(requestDto);
 
         String encodedPassword = passwordEncoder.encode(requestDto.getPassword());
 
         User user = new User(requestDto.getUsername(), encodedPassword, requestDto.getEmail());
+        User savedUser = userRepository.save(user);
 
-        userRepository.save(user);
+        categoryRepository.save(Category.builder()
+                .name("이체")
+                .user(savedUser)
+                .build());
     }
 
     private void existsUser(SignupRequestDto requestDto) {

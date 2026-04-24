@@ -26,12 +26,12 @@ public class CategoryService {
     private final TransactionRepository transactionRepository;
 
     @Transactional
-    public void createCategory(Long userId, CategoryCreateDto createDto) {
-        String categoryName = createDto.getName() == null ? "" : createDto.getName().trim();
-
-        if(categoryName.isEmpty()) {
+    public Long create(Long userId, CategoryCreateDto dto) {
+        if(!StringUtils.hasText(dto.getName())) {
             throw new CustomException(ErrorCode.BLANK_CATEGORY_NAME);
         }
+
+        String categoryName = dto.getName().trim();
 
         if(categoryRepository.existsByUserIdAndName(userId, categoryName)) {
             throw new CustomException(ErrorCode.DUPLICATE_CATEGORY);
@@ -40,9 +40,12 @@ public class CategoryService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        Category category = new Category(categoryName, user);
+        Category category = Category.builder()
+                .name(categoryName)
+                .user(user)
+                .build();
 
-        categoryRepository.save(category);
+        return categoryRepository.save(category).getId();
     }
 
     public List<CategoryResponseDto> getCategories(Long userId) {
@@ -52,59 +55,18 @@ public class CategoryService {
     }
 
     @Transactional
-    public void deleteCategory(Long categoryId, Long userId) {
-        Category category = categoryRepository.findByIdAndUserId(categoryId, userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
-
-        if(transactionRepository.existsByCategoryId(categoryId)) {
-            throw new CustomException(ErrorCode.CATEGORY_IN_USE);
-        }
-
-        categoryRepository.delete(category);
-    }
-
-    @Transactional
-    public void create(Long userId, CategoryCreateDto dto) {
-        if(!StringUtils.hasText(dto.getName())) {
-            throw new CustomException(ErrorCode.BLANK_CATEGORY_NAME);
-        }
-
-        boolean exists = categoryRepository.existsByUserIdAndName(userId, dto.getName().trim());
-
-        if(exists) {
-            throw new CustomException(ErrorCode.DUPLICATE_CATEGORY);
-        }
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-        categoryRepository.save(Category.builder()
-                .name(dto.getName().trim())
-                .user(user)
-                .build());
-    }
-
-    @Transactional
     public void delete(Long userId, Long id) {
-        checkDelete(userId, id);
-
         Category category = categoryRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        categoryRepository.delete(category);
-    }
-
-    @Transactional
-    public void checkDelete(Long userId, Long id) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
-
-        if (!category.getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
-        }
-
-        if (transactionRepository.existsByCategoryId(id)) {
+        if("이체".equals(category.getName())) {
             throw new CustomException(ErrorCode.CATEGORY_IN_USE);
         }
+
+        if(transactionRepository.existsByCategoryId(id)) {
+            throw new CustomException(ErrorCode.CATEGORY_IN_USE);
+        }
+
+        categoryRepository.delete(category);
     }
 }
