@@ -1,0 +1,35 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: accountbook-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: accountbook
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - accountbook-network
+
+  api:
+    build: .
+    container_name: accountbook-api
+    depends_on:
+      - mysql
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/accountbook?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: password
+      JWT_SECRET: TXlfU3VwZXJfU2VjdXJlX0pXVF9LZXlfMTIzNDU2Nzg5MDEyMzQ1Njc4OTA=
+      JWT_EXPIRATION: 3600000
+    networks:
+      - accountbook-network
+
+volumes:
+  mysql-data:
+
+networks:
+  accountbook-network:
