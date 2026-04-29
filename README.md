@@ -1,6 +1,6 @@
 # 가계부 REST API + Docker 배포 프로젝트
 
-기존 [개인 자산 관리를 위한 가계부 서비스](https://github.com/chdaeseung/accountbook)를  
+기존 SSR 기반 [개인 자산 관리를 위한 가계부 서비스](https://github.com/chdaeseung/accountbook)를  
 **RESTful API 구조 + JWT 인증 + Docker 기반 실행 환경**으로 구현한 프로젝트입니다.
 
 기존 SSR(Thymeleaf) 구조를 제거하고  
